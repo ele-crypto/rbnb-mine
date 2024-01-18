@@ -28,7 +28,7 @@ node -v
 # Output v16.19.0
 ```
 
-- Git:[https://www.digitalocean.com/community/tutorials/how-to-install-git-on-ubuntu-20-04](https://www.digitalocean.com/community/tutorials/how-to-install-git-on-ubuntu-20-04).
+- Git: [https://www.digitalocean.com/community/tutorials/how-to-install-git-on-ubuntu-20-04](https://www.digitalocean.com/community/tutorials/how-to-install-git-on-ubuntu-20-04).
 
 ```bash
 git --version
@@ -67,7 +67,7 @@ to discuss what you would like to change.
 npm run gen-wallet
 ```
 
-## Deploy code 
+## 🚀 Deploy code 
 To start the process, execute the following command, the mining process is maintained while you keep the terminal and/or ssh window open.
 
 ```bash
