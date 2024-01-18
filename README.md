@@ -39,10 +39,14 @@ git --version
 ## Download code and install dependency
 
 Then clone the repo :  
-
 ```bash
 # code in boton green or here
 git clone https://github.com/ele-crypto/rbnb-mine.git
+```
+
+Give read and write permissions for the cloned folder:
+```bash
+chmod -R +x rbnb-mine
 ```
 
 And install dependencies :
