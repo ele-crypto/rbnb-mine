@@ -79,6 +79,9 @@ npm run start
 To start the process, run the following command, the mining process, despite closing the current windows, creates a cluster on the server and manages the processes, it is only stopped when the server is stopped or restarted.
 
 ```bash
+# Install global dependency
+npm install pm2 -g
+
 # To start the process
 npm run pm2-start
 ```
