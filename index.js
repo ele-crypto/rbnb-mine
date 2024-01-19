@@ -3,12 +3,12 @@ const csv = require('fast-csv');
 const fs = require('fs');
 
 const { difficulty, walletTablePath, tick } = require('./config');
-const { postResultData, sleepMS } = require('./lib');
+const { postResultData } = require('./lib');
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const currentChallenge = ethers.utils.formatBytes32String(tick);
-let walletStates = {}; // Object to track the state of the wallets
+let walletStates = {};
 
 async function findSolution(difficulty, walletInfo) {
   const { address } = walletInfo;
@@ -24,7 +24,6 @@ async function findSolution(difficulty, walletInfo) {
     if (hashed_solution.startsWith(difficulty)) {
       return potential_solution;
     }
-    await sleepMS(1); // A small delay to avoid blocking the event loop
   }
 }
 
@@ -62,7 +61,7 @@ async function processWallet(walletInfo) {
       const solution = await findSolution(difficulty, walletInfo);
       walletStates[walletInfo.address] = 'success';
       printSingleWalletState(walletInfo.address, 'success');
-      await sendTransaction(solution, walletInfo);
+      sendTransaction(solution, walletInfo).catch(err => console.error('Error sending transaction:', err));
       walletStates[walletInfo.address] = 'processing';
     }
   } catch (err) {
@@ -85,7 +84,7 @@ async function main() {
       return acc;
     }, {});
     console.log("Found", wallets.length, "wallets. Starting processing...");
-    wallets.forEach(walletInfo => processWallet(walletInfo));
+    await Promise.allSettled(wallets.map(processWallet));
   } catch (err) {
     console.error('Error in main function:', err);
   }
