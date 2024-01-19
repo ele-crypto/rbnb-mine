@@ -50,14 +50,18 @@ const getBalance = async address => {
 
 const main = async () => {
   const wallets = await initWallet();
-  for (const w of wallets) {
-    try {
-      const balance = await getBalance(w.address);
+  const balancePromises = wallets.map(w => getBalance(w.address).catch(err => {
+    console.error(`Error processing wallet ${w.address}:`, err);
+    return null;
+  }));
+  
+  const balances = await Promise.all(balancePromises);
+  balances.forEach(balance => {
+    if (balance !== null) {
       console.log(balance);
-    } catch (error) {
-      console.error(`Error processing wallet ${w.address}:`, error);
     }
-  }
+  });
 };
+
 
 main();
