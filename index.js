@@ -8,20 +8,23 @@ const { postResultData, sleepMS } = require('./lib');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const currentChallenge = ethers.utils.formatBytes32String(tick);
+let walletStates = {}; // Object to track the state of the wallets
 
-// Find possible solutions
-function findSolution(difficulty, walletInfo) {
+async function findSolution(difficulty, walletInfo) {
   const { address } = walletInfo;
-  const randomValue = ethers.utils.randomBytes(32);
-  const potentialSolution = ethers.utils.hexlify(randomValue);
-  const hashedSolution = ethers.utils.keccak256(
-    ethers.utils.defaultAbiCoder.encode(['bytes32', 'bytes32', 'address'], [potentialSolution, currentChallenge, address]),
-  );
-
-  if (hashedSolution.startsWith(difficulty)) {
-    return potentialSolution;
-  } else {
-    return null;
+  while (true) {
+    const random_value = ethers.utils.randomBytes(32);
+    const potential_solution = ethers.utils.hexlify(random_value);
+    const hashed_solution = ethers.utils.keccak256(
+      ethers.utils.defaultAbiCoder.encode(
+        ['bytes32', 'bytes32', 'address'],
+        [potential_solution, currentChallenge, address],
+      ),
+    );
+    if (hashed_solution.startsWith(difficulty)) {
+      return potential_solution;
+    }
+    await sleepMS(1); // A small delay to avoid blocking the event loop
   }
 }
 
@@ -32,33 +35,14 @@ async function sendTransaction(solution, walletInfo) {
     address: walletInfo.address,
     difficulty,
     tick,
-  }
+  };
 
-  console.log(body)
-
-  await postResultData(JSON.stringify(body))
+  await postResultData(JSON.stringify(body));
 }
 
-// Function to send transactions concurrently
-async function sendTransactions(solutions, wallets) {
-  const transactionPromises = solutions.map(async (solution, index) => {
-    try {
-      const walletInfo = wallets[index];
-      await sendTransaction(solution, walletInfo);
-      console.log(`Sent successfully solution: ${solution} for wallet: ${walletInfo.address}`);
-    } catch (error) {
-      console.error(`Error sending solution for wallet: ${wallets[index].address}`);
-      console.error(error);
-    }
-  });
-
-  await Promise.all(transactionPromises);
-}
-
-// Initialize the wallets
-async function initWallet() {
+const initWallet = async () => {
+  const wallets = [];
   return new Promise((resolve, reject) => {
-    const wallets = [];
     fs.createReadStream(walletTablePath)
       .pipe(csv.parse({ headers: true }))
       .on('error', error => reject(error))
@@ -70,34 +54,42 @@ async function initWallet() {
       })
       .on('end', () => resolve(wallets));
   });
-}
+};
 
-// Principal function
-async function main() {
-  const wallets = await initWallet();
-
+async function processWallet(walletInfo) {
   try {
-    // Map para ejecutar findSolution para todas las billeteras simultáneamente
-    await Promise.all(wallets.map(async (walletInfo) => {
-      while (true) {
-        const solution = findSolution(difficulty, walletInfo);
-        if (solution !== null) {
-          // Si encuentra una solución, la envía y sigue buscando para la misma billetera
-          await sendTransaction(solution, walletInfo);
-          console.log(`Sent successfully solution: ${solution} for wallet: ${walletInfo.address}`);
-        }
-        // Introduces un pequeño retraso entre iteraciones para evitar consumir demasiados recursos
-        await sleepMS(50);
-      }
-    }));
+    while (true) {
+      const solution = await findSolution(difficulty, walletInfo);
+      walletStates[walletInfo.address] = 'success';
+      printSingleWalletState(walletInfo.address, 'success');
+      await sendTransaction(solution, walletInfo);
+      walletStates[walletInfo.address] = 'processing';
+    }
   } catch (err) {
-    console.log('Error ------------------');
-    console.log(err);
-    console.log('-----------------------');
-    console.log('Restarting the program');
-    main();
+    console.error(`Error in processWallet for wallet ${walletInfo.address}:`, err);
+    walletStates[walletInfo.address] = `Error: ${err.message}`;
   }
 }
 
+function printSingleWalletState(address, state) {
+  console.log("Se encontró solución:");
+  console.table({ [address]: state });
+}
 
+async function main() {
+  try {
+    console.log("Starting the wallet initialization process...");
+    const wallets = await initWallet();
+    walletStates = wallets.reduce((acc, wallet) => {
+      acc[wallet.address] = 'processing';
+      return acc;
+    }, {});
+    console.log("Found", wallets.length, "wallets. Starting processing...");
+    wallets.forEach(walletInfo => processWallet(walletInfo));
+  } catch (err) {
+    console.error('Error in main function:', err);
+  }
+}
+
+console.log("Starting the script...");
 main();
