@@ -36,7 +36,12 @@ const getBalance = async address => {
   try {
     const res = await fetch(url, {
       headers: commonHeaders,
+      referrer: 'https://bnb.reth.cc/',
+      referrerPolicy: 'strict-origin-when-cross-origin',
+      body: null,
       method: 'GET',
+      mode: 'cors',
+      credentials: 'omit',
     });
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
@@ -50,20 +55,14 @@ const getBalance = async address => {
 
 const main = async () => {
   const wallets = await initWallet();
-  const balancePromises = wallets.map(w => 
-    getBalance(w.address)
-      .then(balance => ({ address: w.address, balance }))
-      .catch(() => ({ address: w.address, error: 'no responde' }))
-  );
-  
-  const results = await Promise.all(balancePromises);
-  results.forEach(result => {
-    if (result.error) {
-      console.log(`Wallet ${result.address}: ${result.error}`);
-    } else {
-      console.log(`Wallet ${result.address}:`, result.balance);
+  for (const w of wallets) {
+    try {
+      const balance = await getBalance(w.address);
+      console.log(balance);
+    } catch (error) {
+      console.error(`Error processing wallet ${w.address}:`, error);
     }
-  });
+  }
 };
 
 main();
