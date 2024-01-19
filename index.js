@@ -77,24 +77,19 @@ async function main() {
   const wallets = await initWallet();
 
   try {
-    while (true) {
-      
-      // Promise map to run findSolution for all wallets simultaneously
-      const solutionsPromises = wallets.map(walletInfo => findSolution(difficulty, walletInfo));
-      const solutions = await Promise.all(solutionsPromises);
-
-      // Filter valid solutions to search again immediately
-      const validSolutions = solutions.filter(solution => solution !== null);
-
-      if (validSolutions.length > 0) {
-        console.log(`Sent successfully solutions: ${validSolutions}`);
+    // Map para ejecutar findSolution para todas las billeteras simultáneamente
+    await Promise.all(wallets.map(async (walletInfo) => {
+      while (true) {
+        const solution = findSolution(difficulty, walletInfo);
+        if (solution !== null) {
+          // Si encuentra una solución, la envía y sigue buscando para la misma billetera
+          await sendTransaction(solution, walletInfo);
+          console.log(`Sent successfully solution: ${solution} for wallet: ${walletInfo.address}`);
+        }
+        // Introduces un pequeño retraso entre iteraciones para evitar consumir demasiados recursos
+        await sleepMS(50);
       }
-
-      // Send transactions concurrently
-      await sendTransactions(validSolutions, wallets);
-
-      await sleepMS(50);
-    }
+    }));
   } catch (err) {
     console.log('Error ------------------');
     console.log(err);
@@ -103,5 +98,6 @@ async function main() {
     main();
   }
 }
+
 
 main();
