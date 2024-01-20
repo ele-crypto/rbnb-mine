@@ -49,6 +49,23 @@ async function handleWallet(walletInfo) {
   }
 }
 
+const initWallet = async () => {
+  const wallets = [];
+  return new Promise((resolve, reject) => {
+    fs.createReadStream(walletTablePath)
+      .pipe(csv.parse({ headers: true }))
+      .on('error', error => reject(error))
+      .on('data', row => {
+        wallets.push({
+          address: row['address'],
+          privateKey: row['key'],
+        });
+      })
+      .on('end', () => resolve(wallets));
+  });
+};
+
+
 async function main() {
   const wallets = await initWallet();
   wallets.forEach(walletInfo => {
