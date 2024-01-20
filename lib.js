@@ -11,8 +11,6 @@ const commonHeaders = {
   'sec-fetch-dest': 'empty',
   'sec-fetch-mode': 'cors',
   'sec-fetch-site': 'cross-site',
-  Referer: 'https://bnb.reth.cc/',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
 };
 
 const postResultData = async body => {
@@ -20,6 +18,8 @@ const postResultData = async body => {
   try {
     const res = await fetch(url, {
       headers: commonHeaders,
+      referrer: 'https://bnb.reth.cc/',
+      referrerPolicy: 'strict-origin-when-cross-origin',
       body,
       method: 'POST',
     });
