@@ -1,28 +1,30 @@
-const { ethers } = require('ethers');
-const csv = require('fast-csv');
-const fs = require('fs');
+const { ethers } = require('ethers')
+const csv = require('fast-csv')
+const fs = require('fs')
 
-const { difficulty, walletTablePath, tick } = require('./config');
-const { postResultData } = require('./lib');
+const { difficulty, walletTablePath, tick } = require('./config')
+const { postResultData, getRandomInt, sleepMS } = require('./lib')
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
-const currentChallenge = ethers.utils.formatBytes32String(tick);
-let walletStates = {};
+// const provider = new ethers.providers.JsonRpcProvider(rpcUrl)
 
-async function findSolution(difficulty, walletInfo) {
-  const { address } = walletInfo;
-  while (true) {
-    const random_value = ethers.utils.randomBytes(32);
-    const potential_solution = ethers.utils.hexlify(random_value);
+const currentChallenge = ethers.utils.formatBytes32String(tick)
+
+// Find possible solutions
+function findSolution(difficulty, walletInfo) {
+  const { address } = walletInfo
+  while (1) {
+    const random_value = ethers.utils.randomBytes(32)
+    const potential_solution = ethers.utils.hexlify(random_value)
     const hashed_solution = ethers.utils.keccak256(
       ethers.utils.defaultAbiCoder.encode(
         ['bytes32', 'bytes32', 'address'],
         [potential_solution, currentChallenge, address],
       ),
-    );
+    )
     if (hashed_solution.startsWith(difficulty)) {
-      return potential_solution;
+      return potential_solution
     }
   }
 }
@@ -34,13 +36,15 @@ async function sendTransaction(solution, walletInfo) {
     address: walletInfo.address,
     difficulty,
     tick,
-  };
+  }
 
-  await postResultData(JSON.stringify(body));
+  console.log(body)
+
+  await postResultData(JSON.stringify(body))
 }
 
 const initWallet = async () => {
-  const wallets = [];
+  const wallets = []
   return new Promise((resolve, reject) => {
     fs.createReadStream(walletTablePath)
       .pipe(csv.parse({ headers: true }))
@@ -49,48 +53,29 @@ const initWallet = async () => {
         wallets.push({
           address: row['address'],
           privateKey: row['key'],
-        });
+        })
       })
-      .on('end', () => resolve(wallets));
-  });
-};
-
-async function processWallet(walletInfo) {
-  try {
-    console.log(`Procesando wallet: ${walletInfo.address}`); 
-    while (true) {
-      const solution = await findSolution(difficulty, walletInfo);
-      walletStates[walletInfo.address] = 'success';
-      printSingleWalletState(walletInfo.address, 'success');
-      sendTransaction(solution, walletInfo).catch(err => console.error('Error sending transaction:', err));
-      walletStates[walletInfo.address] = 'processing';
-    }
-  } catch (err) {
-    console.error(`Error in processWallet for wallet ${walletInfo.address}:`, err);
-    walletStates[walletInfo.address] = `Error: ${err.message}`;
-  }
-}
-
-
-function printSingleWalletState(address, state) {
-  console.log("Se encontró solución:");
-  console.table({ [address]: state });
+      .on('end', () => resolve(wallets))
+  })
 }
 
 async function main() {
+  const wallets = await initWallet()
   try {
-    console.log("Starting the wallet initialization process...");
-    const wallets = await initWallet();
-    walletStates = wallets.reduce((acc, wallet) => {
-      acc[wallet.address] = 'processing';
-      return acc;
-    }, {});
-    console.log("Found", wallets.length, "wallets. Starting processing...");
-    await Promise.allSettled(wallets.map(processWallet));
+    for (let walletInfo of wallets) {
+      const solution = findSolution(difficulty, walletInfo)
+      await sendTransaction(solution, walletInfo)
+      console.log(`Sent successfully solution for wallet: ${walletInfo.address}`)
+      await sleepMS(50)
+    }
   } catch (err) {
-    console.error('Error in main function:', err);
+    console.log('Error ------------------')
+    console.log(err)
+    console.log('-----------------------')
+    console.log('Restart the program')
+    main()
   }
 }
 
-console.log("Starting the script...");
-main();
+main()
+
