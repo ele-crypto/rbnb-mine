@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'rbnb-mine',
       script: './index.js',
-      instances: 2,
+      instances: 4,
     },
   ],
 }
