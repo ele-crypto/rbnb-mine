@@ -49,17 +49,21 @@ async function handleWallet(walletInfo) {
   }
 }
 
-const initWallet = async () => {
+const initWallet = async (start, end) => {
   const wallets = [];
+  let index = 0;
   return new Promise((resolve, reject) => {
     fs.createReadStream(walletTablePath)
       .pipe(csv.parse({ headers: true }))
       .on('error', error => reject(error))
       .on('data', row => {
-        wallets.push({
-          address: row['address'],
-          privateKey: row['key'],
-        });
+        if (index >= start && index < end) {
+          wallets.push({
+            address: row['address'],
+            privateKey: row['key'],
+          });
+        }
+        index++;
       })
       .on('end', () => resolve(wallets));
   });
@@ -67,9 +71,11 @@ const initWallet = async () => {
 
 
 async function main() {
-  const wallets = await initWallet();
+  const start = parseInt(process.argv[2]) || 0;
+  const end = parseInt(process.argv[3]) || 10; // Ajusta el valor por defecto si es necesario
+  const wallets = await initWallet(start, end);
   wallets.forEach(walletInfo => {
-    handleWallet(walletInfo); // Iniciar cada wallet en su propio ciclo
+    handleWallet(walletInfo);
   });
 }
 
