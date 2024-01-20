@@ -57,6 +57,7 @@ const initWallet = async () => {
 
 async function processWallet(walletInfo) {
   try {
+    console.log(`Procesando wallet: ${walletInfo.address}`); 
     while (true) {
       const solution = await findSolution(difficulty, walletInfo);
       walletStates[walletInfo.address] = 'success';
@@ -69,6 +70,7 @@ async function processWallet(walletInfo) {
     walletStates[walletInfo.address] = `Error: ${err.message}`;
   }
 }
+
 
 function printSingleWalletState(address, state) {
   console.log("Se encontró solución:");
