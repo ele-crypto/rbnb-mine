@@ -5,7 +5,7 @@ const fs = require('fs');
 const { difficulty, walletTablePath, tick } = require('./config');
 const { postResultData } = require('./lib');
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+//process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const currentChallenge = ethers.utils.formatBytes32String(tick);
 
