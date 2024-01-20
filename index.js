@@ -66,7 +66,7 @@ async function main() {
       const solution = findSolution(difficulty, walletInfo)
       await sendTransaction(solution, walletInfo)
       console.log(`Sent successfully solution for wallet: ${walletInfo.address}`)
-      await sleepMS(50)
+      //await sleepMS(50)
     }
   } catch (err) {
     console.log('Error ------------------')
