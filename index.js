@@ -1,30 +1,28 @@
-const { ethers } = require('ethers')
-const csv = require('fast-csv')
-const fs = require('fs')
+const { ethers } = require('ethers');
+const csv = require('fast-csv');
+const fs = require('fs');
 
-const { difficulty, walletTablePath, tick } = require('./config')
-const { postResultData, getRandomInt, sleepMS } = require('./lib')
+const { difficulty, walletTablePath, tick } = require('./config');
+const { postResultData } = require('./lib');
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-// const provider = new ethers.providers.JsonRpcProvider(rpcUrl)
-
-const currentChallenge = ethers.utils.formatBytes32String(tick)
+const currentChallenge = ethers.utils.formatBytes32String(tick);
 
 // Find possible solutions
 function findSolution(difficulty, walletInfo) {
-  const { address } = walletInfo
+  const { address } = walletInfo;
   while (1) {
-    const random_value = ethers.utils.randomBytes(32)
-    const potential_solution = ethers.utils.hexlify(random_value)
+    const random_value = ethers.utils.randomBytes(32);
+    const potential_solution = ethers.utils.hexlify(random_value);
     const hashed_solution = ethers.utils.keccak256(
       ethers.utils.defaultAbiCoder.encode(
         ['bytes32', 'bytes32', 'address'],
         [potential_solution, currentChallenge, address],
       ),
-    )
+    );
     if (hashed_solution.startsWith(difficulty)) {
-      return potential_solution
+      return potential_solution;
     }
   }
 }
@@ -36,15 +34,15 @@ async function sendTransaction(solution, walletInfo) {
     address: walletInfo.address,
     difficulty,
     tick,
-  }
+  };
 
-  console.log(body)
+  console.log(body);
 
-  await postResultData(JSON.stringify(body))
+  await postResultData(JSON.stringify(body));
 }
 
 const initWallet = async () => {
-  const wallets = []
+  const wallets = [];
   return new Promise((resolve, reject) => {
     fs.createReadStream(walletTablePath)
       .pipe(csv.parse({ headers: true }))
@@ -53,29 +51,34 @@ const initWallet = async () => {
         wallets.push({
           address: row['address'],
           privateKey: row['key'],
-        })
+        });
       })
-      .on('end', () => resolve(wallets))
-  })
-}
+      .on('end', () => resolve(wallets));
+  });
+};
 
-async function main() {
-  const wallets = await initWallet()
-  try {
-    for (let walletInfo of wallets) {
-      const solution = findSolution(difficulty, walletInfo)
-      await sendTransaction(solution, walletInfo)
-      console.log(`Sent successfully solution for wallet: ${walletInfo.address}`)
-      //await sleepMS(50)
+async function handleWallet(walletInfo) {
+  while (true) { // Ciclo infinito para cada wallet
+    try {
+      console.log(`Buscando solución para wallet: ${walletInfo.address}`);
+
+      const solution = findSolution(difficulty, walletInfo);
+      console.log(`Solución encontrada para wallet: ${walletInfo.address}, solución: ${solution}`);
+
+      await sendTransaction(solution, walletInfo);
+      console.log(`Solución enviada con éxito para wallet: ${walletInfo.address}`);
+    } catch (error) {
+      console.error(`Error con wallet ${walletInfo.address}:`, error);
+      // Aquí puedes decidir si deseas reiniciar el bucle para esta wallet o no
     }
-  } catch (err) {
-    console.log('Error ------------------')
-    console.log(err)
-    console.log('-----------------------')
-    console.log('Restart the program')
-    main()
   }
 }
 
-main()
+async function main() {
+  const wallets = await initWallet();
+  wallets.forEach(walletInfo => {
+    handleWallet(walletInfo); // Iniciar cada wallet en su propio bucle
+  });
+}
 
+main();
