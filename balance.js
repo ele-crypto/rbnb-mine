@@ -6,14 +6,18 @@ const { walletTablePath, responsePath } = require('./config');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const commonHeaders = {
-  accept: 'application/json, text/plain, */*',
-  'accept-language': 'zh-CN,zh;q=0.9',
-  'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-  'sec-ch-ua-mobile': '?0',
-  'sec-ch-ua-platform': '"Windows"',
-  'sec-fetch-dest': 'empty',
-  'sec-fetch-mode': 'cors',
-  'sec-fetch-site': 'cross-site',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Accept-Language': 'es-419,es;q=0.9,en;q=0.8,ru;q=0.7',
+  'Origin': 'https://bnb.reth.cc',
+  'Referer': 'https://bnb.reth.cc/',
+  'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"macOS"',
+  'Sec-Fetch-Dest': 'empty',
+  'Sec-Fetch-Mode': 'cors',
+  'Sec-Fetch-Site': 'cross-site',
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 };
 
 const initWallet = async () => {
@@ -36,9 +40,6 @@ const getBalance = async address => {
   try {
     const res = await fetch(url, {
       headers: commonHeaders,
-      referrer: 'https://bnb.reth.cc/',
-      referrerPolicy: 'strict-origin-when-cross-origin',
-      body: null,
       method: 'GET',
       mode: 'cors',
       credentials: 'omit',
