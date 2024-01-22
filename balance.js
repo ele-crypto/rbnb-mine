@@ -1,76 +1,68 @@
-const fetch = require('node-fetch');
-const csv = require('fast-csv');
-const fs = require('fs');
-const https = require('https');
-const { walletTablePath, responsePath, certPath } = require('./config');
+const fetch = require('node-fetch')
+const csv = require('fast-csv')
+const fs = require('fs')
 
-const cert = fs.readFileSync(certPath);
-const httpsAgent = new https.Agent({
-  ca: cert
-});
+const { sleepMS } = require('./lib')
+const { walletTablePath } = require('./config')
 
-const commonHeaders = {
-  'Accept': 'application/json, text/plain, */*',
-  'Accept-Language': 'es-419,es;q=0.9,en;q=0.8,ru;q=0.7',
-  'Origin': 'https://bnb.reth.cc',
-  'Referer': 'https://bnb.reth.cc/',
-  'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-  'Sec-Ch-Ua-Mobile': '?0',
-  'Sec-Ch-Ua-Platform': '"macOS"',
-  'Sec-Fetch-Dest': 'empty',
-  'Sec-Fetch-Mode': 'cors',
-  'Sec-Fetch-Site': 'cross-site',
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-};
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 const initWallet = async () => {
-  const wallets = [];
+  const wallets = []
   return new Promise((resolve, reject) => {
     fs.createReadStream(walletTablePath)
       .pipe(csv.parse({ headers: true }))
       .on('error', error => reject(error))
       .on('data', row => {
         wallets.push({
-          address: row['address'],
-        });
+          address: row['地址'],
+        })
       })
-      .on('end', () => resolve(wallets));
-  });
-};
+      .on('end', () => resolve(wallets))
+  })
+}
 
 const getBalance = async address => {
-  const url = `${responsePath}/balance?address=${address}`;
-  try {
-    const res = await fetch(url, {
-      headers: commonHeaders,
-      method: 'GET',
-      mode: 'cors',
-      agent: httpsAgent,
-      credentials: 'omit',
-    });
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`);
-    }
-    return await res.json();
-  } catch (error) {
-    console.error('Error fetching balance:', error);
-    throw error;
-  }
-};
+  const url = `https://ec2-18-218-197-117.us-east-2.compute.amazonaws.com/balance?address=${address}`
+  const res = await fetch(url, {
+    headers: {
+      accept: 'application/json, text/plain, */*',
+      'accept-language': 'zh-CN,zh;q=0.9',
+      'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'sec-fetch-dest': 'empty',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'cross-site',
+    },
+    referrer: 'https://bnb.reth.cc/',
+    referrerPolicy: 'strict-origin-when-cross-origin',
+    body: null,
+    method: 'GET',
+    mode: 'cors',
+    credentials: 'omit',
+  })
+  const r = await res.json()
+  console.log(r.address, r.balance)
+  return r.balance
+}
 
 const main = async () => {
-  const wallets = await initWallet();
-  const balancePromises = wallets.map(w => getBalance(w.address).catch(error => {
-    console.error(`Error processing wallet ${w.address}:`, error);
-    return null;
-  }));
-  const balances = await Promise.all(balancePromises);
-  balances.forEach((balance, index) => {
-    if (balance) {
-      console.log(`Wallet ${wallets[index].address}:`, balance);
+  let count = 0
+  const wallets = await initWallet()
+
+  for (const w of wallets) {
+    try {
+      const balance = await getBalance(w.address)
+      count += balance
+    } catch (err) {
+      console.log('请求失败')
     }
-  });
-};
 
+    await sleepMS(1000)
+  }
 
-main();
+  console.log('总量：', count)
+}
+
+main()
