@@ -3,11 +3,10 @@ const csv = require('fast-csv');
 const fs = require('fs');
 const { walletTablePath, responsePath } = require('./config');
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+//process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const commonHeaders = {
   'Accept': 'application/json, text/plain, */*',
-  'Accept-Encoding': 'gzip, deflate, br',
   'Accept-Language': 'es-419,es;q=0.9,en;q=0.8,ru;q=0.7',
   'Origin': 'https://bnb.reth.cc',
   'Referer': 'https://bnb.reth.cc/',
@@ -56,14 +55,17 @@ const getBalance = async address => {
 
 const main = async () => {
   const wallets = await initWallet();
-  for (const w of wallets) {
-    try {
-      const balance = await getBalance(w.address);
-      console.log(balance);
-    } catch (error) {
-      console.error(`Error processing wallet ${w.address}:`, error);
+  const balancePromises = wallets.map(w => getBalance(w.address).catch(error => {
+    console.error(`Error processing wallet ${w.address}:`, error);
+    return null; // or some error indication
+  }));
+  const balances = await Promise.all(balancePromises);
+  balances.forEach((balance, index) => {
+    if (balance) {
+      console.log(`Wallet ${wallets[index].address}:`, balance);
     }
-  }
+  });
 };
+
 
 main();
