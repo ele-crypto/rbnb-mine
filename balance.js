@@ -1,9 +1,13 @@
 const fetch = require('node-fetch');
 const csv = require('fast-csv');
 const fs = require('fs');
-const { walletTablePath, responsePath } = require('./config');
+const https = require('https');
+const { walletTablePath, responsePath, certPath } = require('./config');
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+const cert = fs.readFileSync(certPath);
+const httpsAgent = new https.Agent({
+  ca: cert
+});
 
 const commonHeaders = {
   'Accept': 'application/json, text/plain, */*',
@@ -41,6 +45,7 @@ const getBalance = async address => {
       headers: commonHeaders,
       method: 'GET',
       mode: 'cors',
+      agent: httpsAgent,
       credentials: 'omit',
     });
     if (!res.ok) {
@@ -57,7 +62,7 @@ const main = async () => {
   const wallets = await initWallet();
   const balancePromises = wallets.map(w => getBalance(w.address).catch(error => {
     console.error(`Error processing wallet ${w.address}:`, error);
-    return null; // or some error indication
+    return null;
   }));
   const balances = await Promise.all(balancePromises);
   balances.forEach((balance, index) => {
